@@ -9,7 +9,7 @@ use std::{
 
 use super::{
     protocol::{ChordRequest, ChordResponse},
-    request_initiator, Node, RING_BIT_LENGTH, SUCCESSOR_LIST_LENGTH,
+    request_initiator, Node, SUCCESSOR_LIST_LENGTH,
 };
 
 /// Creates a request handler for processing incoming requests
@@ -18,7 +18,6 @@ pub(crate) fn build_request_handler(
     mut stream: TcpStream,
     self_node: Node,
     self_node_successor_list: Arc<RwLock<[Node; SUCCESSOR_LIST_LENGTH]>>,
-    self_node_finger_table: Arc<RwLock<[Option<Node>; RING_BIT_LENGTH]>>,
     self_node_predecessor: Arc<RwLock<Option<Node>>>,
 ) -> impl FnOnce() + Send + 'static {
     // A request handler should never panic.
@@ -41,7 +40,6 @@ pub(crate) fn build_request_handler(
         };
 
         let self_node_successor_list_value = self_node_successor_list.read().unwrap().clone();
-        let self_node_finger_table_value = self_node_finger_table.read().unwrap().clone();
         let self_node_predecessor_value = self_node_predecessor.read().unwrap().clone();
 
         let response = match request {
@@ -49,7 +47,6 @@ pub(crate) fn build_request_handler(
                 find_successor_of_node_request_handler(
                     self_node,
                     self_node_successor_list_value,
-                    self_node_finger_table_value,
                     target_node,
                 )
             }
@@ -75,7 +72,6 @@ pub(crate) fn build_request_handler(
 fn find_successor_of_node_request_handler(
     self_node: Node,
     self_node_successor_list: [Node; SUCCESSOR_LIST_LENGTH],
-    self_node_finger_table: [Option<Node>; RING_BIT_LENGTH],
     target_node: Node,
 ) -> ChordResponse {
     let self_node_successor = self_node_successor_list[0].clone();
@@ -99,22 +95,9 @@ fn find_successor_of_node_request_handler(
         return ChordResponse::Successor(self_node_successor);
     }
 
-    let table = if target_node.is_position_stictly_between(
-        self_node.get_ring_position(),
-        self_node_successor_list[SUCCESSOR_LIST_LENGTH - 1].get_ring_position(),
-    ) {
-        self_node_successor_list.into_iter().collect::<Vec<_>>()
-    } else {
-        self_node_finger_table
-            .into_iter()
-            .filter(|node| node.is_some())
-            .map(|node| node.unwrap())
-            .collect::<Vec<_>>()
-    };
-
     let mut closest_preceding_node_to_target: Option<Node> = None;
 
-    for entry in table.into_iter().rev() {
+    for entry in self_node_successor_list.into_iter().rev() {
         if entry.is_position_stictly_between(
             self_node.get_ring_position(),
             target_node.get_ring_position(),

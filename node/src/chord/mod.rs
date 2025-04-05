@@ -107,17 +107,12 @@ impl Node {
     }
 }
 
-/// Initializes the core components of the current node
-/// `self_node`, including successor list
-/// and finger table based on the provided argument.
-pub(crate) fn initialize_self_node_core_components(
+/// Initializes the successor_list of the current node
+/// `self_node`, based on the provided argument.
+pub(crate) fn initialize_self_node_successor_list(
     self_node: &Node,
     args: &Args,
-) -> Result<
-    (
-        [Node; SUCCESSOR_LIST_LENGTH],
-        [Option<Node>; RING_BIT_LENGTH],
-    ),
+) -> Result<[Node; SUCCESSOR_LIST_LENGTH],
     Box<dyn Error>,
 > {
     match *args {
@@ -128,15 +123,7 @@ pub(crate) fn initialize_self_node_core_components(
             let sucessor_list: [Node; SUCCESSOR_LIST_LENGTH] =
                 std::array::from_fn(|_| self_node.clone());
 
-            let finger_table: [Option<Node>; RING_BIT_LENGTH] = std::array::from_fn(|i| {
-                if i == 0 {
-                    Some(self_node.clone())
-                } else {
-                    None
-                }
-            });
-
-            Ok((sucessor_list, finger_table))
+            Ok(sucessor_list)
         }
         Args::Join {
             self_port: _,
@@ -159,15 +146,8 @@ pub(crate) fn initialize_self_node_core_components(
             successor_list.push(successor.clone());
             successor_list.extend_from_slice(&remote_successor_list[0..4]);
 
-            let finger_table: [Option<Node>; RING_BIT_LENGTH] = std::array::from_fn(|i| {
-                if i == 0 {
-                    Some(successor.clone())
-                } else {
-                    None
-                }
-            });
 
-            Ok((successor_list.try_into().unwrap(), finger_table))
+            Ok(successor_list.try_into().unwrap())
         }
     }
 }

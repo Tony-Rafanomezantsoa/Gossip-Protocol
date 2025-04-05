@@ -1,5 +1,5 @@
 use chord::{
-    protocol::ChordResponse, request_initiator, Node, RING_BIT_LENGTH, SUCCESSOR_LIST_LENGTH,
+    protocol::ChordResponse, request_initiator, Node, SUCCESSOR_LIST_LENGTH,
 };
 use cli::Args;
 use std::{
@@ -36,14 +36,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         },
     )?;
 
-    let (self_node_successor_list, self_node_finger_table) =
-        chord::initialize_self_node_core_components(&self_node, &args)?;
+    let self_node_successor_list =
+        chord::initialize_self_node_successor_list(&self_node, &args)?;
 
     println!("node is running successfully");
 
     let self_node_predecessor: Arc<RwLock<Option<Node>>> = Arc::new(RwLock::new(None));
     let self_node_successor_list = Arc::new(RwLock::new(self_node_successor_list));
-    let self_node_finger_table = Arc::new(RwLock::new(self_node_finger_table));
 
     print_self_node_core_components(
         self_node.clone(),
@@ -55,7 +54,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         self_node.clone(),
         Arc::clone(&self_node_predecessor),
         Arc::clone(&self_node_successor_list),
-        Arc::clone(&self_node_finger_table),
     );
 
     let server_task_sender = spawn_background_threads(SERVER_THREAD_POOL_SIZE)?;
@@ -73,7 +71,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             request_stream,
             self_node.clone(),
             Arc::clone(&self_node_successor_list),
-            Arc::clone(&self_node_finger_table),
             Arc::clone(&self_node_predecessor),
         );
 
@@ -119,7 +116,6 @@ fn run_network_stabilization(
     self_node: Node,
     self_node_predecessor: Arc<RwLock<Option<Node>>>,
     self_node_successor_list: Arc<RwLock<[Node; SUCCESSOR_LIST_LENGTH]>>,
-    self_node_finger_table: Arc<RwLock<[Option<Node>; RING_BIT_LENGTH]>>,
 ) {
     thread::spawn(move || loop {
         let mut active_successor = None;
@@ -181,13 +177,6 @@ fn run_network_stabilization(
         {
             let mut self_node_successor_list_lock = self_node_successor_list.write().unwrap();
             *self_node_successor_list_lock = new_successor_list.try_into().unwrap();
-        }
-
-        // Updates the first entry of the finger table (self_node_finger_table)
-        // which represents the direct successor of self_node.
-        {
-            let mut self_node_finger_table_lock = self_node_finger_table.write().unwrap();
-            (*self_node_finger_table_lock)[0] = Some(current_successor);
         }
 
         // Checks if `self_node_predecessor` is active.
