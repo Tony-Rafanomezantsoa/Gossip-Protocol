@@ -16,6 +16,7 @@ use std::{
 
 mod chord;
 mod cli;
+mod gossip;
 
 const SERVER_THREAD_POOL_SIZE: u8 = 10;
 

@@ -11,15 +11,15 @@ use protocol::ChordResponse;
 
 use crate::cli::Args;
 
-pub mod protocol;
-pub mod request_handler;
-pub mod request_initiator;
-pub mod utils;
+pub(crate) mod protocol;
+pub(crate) mod request_handler;
+pub(crate) mod request_initiator;
+pub(crate) mod utils;
 
-pub const RING_BIT_LENGTH: usize = 128;
-pub const RING_BYTE_LENGTH: usize = RING_BIT_LENGTH / 8;
-pub const SUCCESSOR_LIST_LENGTH: usize = 5;
-pub const RING_MAX_POSITION: u128 = u128::MAX;
+pub(crate) const RING_BIT_LENGTH: usize = 128;
+pub(crate) const RING_BYTE_LENGTH: usize = RING_BIT_LENGTH / 8;
+pub(crate) const SUCCESSOR_LIST_LENGTH: usize = 5;
+pub(crate) const RING_MAX_POSITION: u128 = u128::MAX;
 
 /// Contains information about a Chord Node,
 /// including identifier and the public socket
