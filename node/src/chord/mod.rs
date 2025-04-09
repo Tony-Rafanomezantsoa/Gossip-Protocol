@@ -112,9 +112,7 @@ impl Node {
 pub(crate) fn initialize_self_node_successor_list(
     self_node: &Node,
     args: &Args,
-) -> Result<[Node; SUCCESSOR_LIST_LENGTH],
-    Box<dyn Error>,
-> {
+) -> Result<[Node; SUCCESSOR_LIST_LENGTH], Box<dyn Error>> {
     match *args {
         Args::Init {
             self_port: _,
@@ -145,7 +143,6 @@ pub(crate) fn initialize_self_node_successor_list(
             let mut successor_list = Vec::new();
             successor_list.push(successor.clone());
             successor_list.extend_from_slice(&remote_successor_list[0..4]);
-
 
             Ok(successor_list.try_into().unwrap())
         }

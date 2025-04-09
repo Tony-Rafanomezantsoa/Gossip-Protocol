@@ -1,6 +1,4 @@
-use chord::{
-    protocol::ChordResponse, request_initiator, Node, SUCCESSOR_LIST_LENGTH,
-};
+use chord::{protocol::ChordResponse, request_initiator, Node, SUCCESSOR_LIST_LENGTH};
 use cli::Args;
 use std::{
     error::Error,
@@ -37,8 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         },
     )?;
 
-    let self_node_successor_list =
-        chord::initialize_self_node_successor_list(&self_node, &args)?;
+    let self_node_successor_list = chord::initialize_self_node_successor_list(&self_node, &args)?;
 
     println!("node is running successfully");
 
