@@ -1,8 +1,6 @@
 //! Contains abstractions related
 //! to the Gossip protocol.
 
-use std::error::Error;
-
 use regex::Regex;
 
 use super::State;
@@ -16,19 +14,35 @@ pub(crate) enum GossipRequest {
 }
 
 impl GossipRequest {
-    pub(crate) fn parse(request: &str) -> Result<Self, Box<dyn Error>> {
-        // UPDATE_DATA text protocol parsing
+    pub(crate) fn parse(request: &str) -> Result<Self, &'static str> {
+        // UPDATE_DATA request protocol parsing
+        if let Some(gossip_request) = Self::parse_update_data_request_protocol(request) {
+            return Ok(gossip_request);
+        }
+
+        // SHARE_DATA request protocol parsing
+        if let Some(gossip_request) = Self::parse_share_data_request_protocol(request) {
+            return Ok(gossip_request);
+        }
+
+        Err("invalid request (protocol error)")
+    }
+
+    fn parse_update_data_request_protocol(request: &str) -> Option<Self> {
         let update_data_request_regex = Regex::new(r"^UPDATE_DATA=\[(.+)\];$").unwrap();
 
         if update_data_request_regex.is_match(request) {
             let request_datas = update_data_request_regex.captures(request).unwrap();
             let data = request_datas[1].to_string();
-            return Ok(Self::UpdateData(data));
+            return Some(Self::UpdateData(data));
         }
 
-        // SHARE_DATA text protocol parsing
+        None
+    }
+
+    fn parse_share_data_request_protocol(request: &str) -> Option<Self> {
         if request == "SHARE_DATA=NONE;" {
-            return Ok(Self::ShareData(None));
+            return Some(Self::ShareData(None));
         }
 
         let share_data_request_regex = Regex::new(r"^SHARE_DATA=\[(.+)\]\[([0-9]+)\];$").unwrap();
@@ -37,10 +51,10 @@ impl GossipRequest {
             let request_datas = share_data_request_regex.captures(request).unwrap();
             let data = request_datas[1].to_string();
             let timestamp = request_datas[2].parse::<u128>().unwrap();
-            return Ok(Self::ShareData(Some(State { data, timestamp })));
+            return Some(Self::ShareData(Some(State { data, timestamp })));
         }
 
-        Err(From::from("invalid request (protocol error)"))
+        None
     }
 }
 
@@ -49,7 +63,7 @@ mod gossip_request_protocol_test {
     use super::GossipRequest;
 
     #[test]
-    fn update_data_request_parse_test() {
+    fn update_data_request_protocol_parse_test() {
         let request = "UPDATE_DATA=[Some data ...];";
 
         let gossip_request = GossipRequest::parse(request).unwrap();
@@ -62,7 +76,7 @@ mod gossip_request_protocol_test {
     }
 
     #[test]
-    fn share_data_request_parse_test() {
+    fn share_data_request_protocol_parse_test() {
         // SHARE_DATA request protocol with NONE
         let request = "SHARE_DATA=NONE;";
 
@@ -83,4 +97,11 @@ mod gossip_request_protocol_test {
             panic!("parsing error");
         }
     }
+}
+
+/// Response abstraction for
+/// the Gossip protocol.
+pub(crate) enum GossipResponse {
+    Ignore,
+    ResponseWithData(State),
 }
