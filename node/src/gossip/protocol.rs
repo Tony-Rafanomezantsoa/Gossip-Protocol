@@ -14,6 +14,8 @@ pub(crate) enum GossipRequest {
 }
 
 impl GossipRequest {
+    /// Parses a string slice into a `GossipRequest`
+    /// according to the protocol specification.
     pub(crate) fn parse(request: &str) -> Result<Self, &'static str> {
         // UPDATE_DATA request protocol parsing
         if let Some(gossip_request) = Self::parse_update_data_request_protocol(request) {
@@ -101,7 +103,31 @@ mod gossip_request_protocol_test {
 
 /// Response abstraction for
 /// the Gossip protocol.
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) enum GossipResponse {
     Ignore,
     ResponseWithData(State),
+}
+
+impl GossipResponse {
+    /// Parses a string slice into a `GossipResponse`
+    /// according to the protocol specification.
+    pub(crate) fn parse(response: &str) -> Result<Self, &'static str> {
+        todo!()
+    }
+}
+
+#[cfg(test)]
+mod gossip_response_protocol_test {
+    use crate::gossip::protocol::GossipResponse;
+
+    #[test]
+    fn ignore_response_protocol_parse_test() {
+        let response = "RESPONSE=IGNORE;";
+
+        assert_eq!(
+            GossipResponse::parse(response).unwrap(),
+            GossipResponse::Ignore
+        );
+    }
 }
