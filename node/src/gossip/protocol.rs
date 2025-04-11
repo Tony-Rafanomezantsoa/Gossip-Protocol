@@ -117,13 +117,31 @@ impl GossipResponse {
         if let Some(gossip_reponse) = Self::parse_ignore_response_protocol(response) {
             return Ok(gossip_reponse);
         }
-    
+
+        // RESPONSE WITH DATA response protocol parsing
+        if let Some(gossip_reponse) = Self::parse_response_with_data_protocol(response) {
+            return Ok(gossip_reponse);
+        }
+
         Err("invalid response (protocol error)")
     }
 
     fn parse_ignore_response_protocol(response: &str) -> Option<Self> {
         if response == "RESPONSE=IGNORE;" {
             return Some(Self::Ignore);
+        }
+
+        None
+    }
+
+    fn parse_response_with_data_protocol(response: &str) -> Option<Self> {
+        let response_with_data_regex = Regex::new(r"^RESPONSE=\[(.+)\]\[([0-9]+)\];$").unwrap();
+
+        if response_with_data_regex.is_match(response) {
+            let request_datas = response_with_data_regex.captures(response).unwrap();
+            let data = request_datas[1].to_string();
+            let timestamp = request_datas[2].parse::<u128>().unwrap();
+            return Some(Self::ResponseWithData(State { data, timestamp }));
         }
 
         None
@@ -142,5 +160,19 @@ mod gossip_response_protocol_test {
             GossipResponse::parse(response).unwrap(),
             GossipResponse::Ignore
         );
+    }
+
+    #[test]
+    fn response_with_data_protocol_parse_test() {
+        let response = "RESPONSE=[Some data ...][7851391275623];";
+
+        let gossip_response = GossipResponse::parse(response).unwrap();
+
+        if let GossipResponse::ResponseWithData(data) = gossip_response {
+            assert_eq!(data.data, String::from("Some data ..."));
+            assert_eq!(data.timestamp, 7851391275623);
+        } else {
+            panic!("parsing error");
+        }
     }
 }
