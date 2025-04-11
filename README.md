@@ -9,6 +9,5 @@ This project is a minimal implementation of a push-pull gossip protocol for in-m
 ## References
 This project is based on the following papers:  
 
-[Gossip and Epidemic Protocols](https://github.com/Tony-Rafanomezantsoa/Gossip-Protocol/blob/main/Gossip paper.pdf)
-
+[Gossip and Epidemic Protocols](https://github.com/Tony-Rafanomezantsoa/Gossip-Protocol/blob/main/Gossip_paper.pdf)
 [Chord: A Scalable Peer-to-peer Lookup Service for Internet Applications](https://pdos.csail.mit.edu/papers/chord:sigcomm01/chord_sigcomm.pdf)
