@@ -113,7 +113,20 @@ impl GossipResponse {
     /// Parses a string slice into a `GossipResponse`
     /// according to the protocol specification.
     pub(crate) fn parse(response: &str) -> Result<Self, &'static str> {
-        todo!()
+        // IGNORE response protocol parsing
+        if let Some(gossip_reponse) = Self::parse_ignore_response_protocol(response) {
+            return Ok(gossip_reponse);
+        }
+    
+        Err("invalid response (protocol error)")
+    }
+
+    fn parse_ignore_response_protocol(response: &str) -> Option<Self> {
+        if response == "RESPONSE=IGNORE;" {
+            return Some(Self::Ignore);
+        }
+
+        None
     }
 }
 
