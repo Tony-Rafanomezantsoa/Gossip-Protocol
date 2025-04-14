@@ -2,7 +2,7 @@
 //!
 //! A custom and application-specific protocol tailored to the Chord mechanism.
 
-use std::{error::Error, net::SocketAddr};
+use std::net::SocketAddr;
 
 use regex::Regex;
 
@@ -22,8 +22,36 @@ pub(crate) enum ChordResponse {
 impl ChordResponse {
     /// Parses a string slice into a `ChordResponse`
     /// according to the protocol specification.
-    pub(crate) fn parse(response: &str) -> Result<Self, Box<dyn Error>> {
+    pub(crate) fn parse(response: &str) -> Result<Self, &'static str> {
         // SUCCESSOR text protocol parsing
+        if let Some(chord_response) = Self::parse_successor_response_protocol(response)? {
+            return Ok(chord_response);
+        }
+
+        // SUCCESSOR LIST text protocol parsing
+        if let Some(chord_response) = Self::parse_successor_list_response_protocol(response)? {
+            return Ok(chord_response);
+        }
+
+        // PREDECESSOR text protocol parsing
+        if let Some(chord_response) = Self::parse_predecessor_response_protocol(response)? {
+            return Ok(chord_response);
+        }
+
+        // ACTIVE text protocol parsing
+        if let Some(gossip_response) = Self::parse_active_response_protocol(response) {
+            return Ok(gossip_response);
+        }
+
+        // ERROR text protocol parsing
+        if let Some(gossip_response) = Self::parse_error_response_protocol(response) {
+            return Ok(gossip_response);
+        }
+
+        Err("invalid response (protocol error)")
+    }
+
+    fn parse_successor_response_protocol(response: &str) -> Result<Option<Self>, &'static str> {
         let successor_response_regex =
             Regex::new(r"^SUCCESSOR=\[([0-9a-f]{32})\]\[([0-9a-f:.\[\]]+)\];$").unwrap();
 
@@ -32,15 +60,20 @@ impl ChordResponse {
             let successor_id = response_datas[1].to_string();
             let successor_public_addr = response_datas[2]
                 .parse::<SocketAddr>()
-                .map_err(|_| "invalid response (invalid socket address returned)")?;
+                .map_err(|_| "invalid response (invalid socket address)")?;
 
-            return Ok(Self::Successor(Node::create_from(
+            return Ok(Some(Self::Successor(Node::create_from(
                 hex::decode(successor_id).unwrap().try_into().unwrap(),
                 successor_public_addr,
-            )));
+            ))));
         }
 
-        // SUCCESSOR LIST text protocol parsing
+        Ok(None)
+    }
+
+    fn parse_successor_list_response_protocol(
+        response: &str,
+    ) -> Result<Option<Self>, &'static str> {
         let successor_list_response_regex = Regex::new(
             r"^SUCCESSOR_LIST=\{\[([0-9a-f]{32})\]\[([0-9a-f:.\[\]]+)\],\[([0-9a-f]{32})\]\[([0-9a-f:.\[\]]+)\],\[([0-9a-f]{32})\]\[([0-9a-f:.\[\]]+)\],\[([0-9a-f]{32})\]\[([0-9a-f:.\[\]]+)\],\[([0-9a-f]{32})\]\[([0-9a-f:.\[\]]+)\]\};$"
         ).unwrap();
@@ -53,7 +86,7 @@ impl ChordResponse {
                 let successor_id = response_datas[2 * i - 1].to_string();
                 let successor_public_addr = response_datas[2 * i]
                     .parse::<SocketAddr>()
-                    .map_err(|_| "invalid response (invalid socket address returned)")?;
+                    .map_err(|_| "invalid response (invalid socket address)")?;
 
                 successor_list.push(Node::create_from(
                     hex::decode(successor_id).unwrap().try_into().unwrap(),
@@ -61,12 +94,17 @@ impl ChordResponse {
                 ));
             }
 
-            return Ok(Self::SuccessorList(successor_list.try_into().unwrap()));
+            return Ok(Some(Self::SuccessorList(
+                successor_list.try_into().unwrap(),
+            )));
         }
 
-        // PREDECESSOR text protocol parsing
+        Ok(None)
+    }
+
+    fn parse_predecessor_response_protocol(response: &str) -> Result<Option<Self>, &'static str> {
         if response == "PREDECESSOR=NONE;" {
-            return Ok(Self::Predecessor(None));
+            return Ok(Some(Self::Predecessor(None)));
         }
 
         let predecessor_exist_response_regex =
@@ -77,29 +115,34 @@ impl ChordResponse {
             let predecessor_id = response_datas[1].to_string();
             let predecessor_public_addr = response_datas[2]
                 .parse::<SocketAddr>()
-                .map_err(|_| "invalid response (invalid socket address returned)")?;
+                .map_err(|_| "invalid response (invalid socket address)")?;
 
-            return Ok(Self::Predecessor(Some(Node::create_from(
+            return Ok(Some(Self::Predecessor(Some(Node::create_from(
                 hex::decode(predecessor_id).unwrap().try_into().unwrap(),
                 predecessor_public_addr,
-            ))));
+            )))));
         }
 
-        // ACTIVE text protocol parsing
+        Ok(None)
+    }
+
+    fn parse_active_response_protocol(response: &str) -> Option<Self> {
         if response == "ACTIVE;" {
-            return Ok(Self::Active);
+            return Some(Self::Active);
         }
+        None
+    }
 
-        // ERROR text protocol parsing
+    fn parse_error_response_protocol(response: &str) -> Option<Self> {
         let error_response_regex = Regex::new(r"^ERROR=\[(.+)\];$").unwrap();
 
         if error_response_regex.is_match(response) {
             let response_datas = error_response_regex.captures(response).unwrap();
             let error_msg = response_datas[1].to_string();
-            return Ok(Self::Error(error_msg));
+            return Some(Self::Error(error_msg));
         }
 
-        Err(From::from("invalid response (protocol error)"))
+        None
     }
 
     /// Converts the current `ChordResponse` abstraction
@@ -407,8 +450,38 @@ pub(crate) enum ChordRequest {
 impl ChordRequest {
     /// Parses a string slice into a `ChordRequest`
     /// according to the protocol specification.
-    pub(crate) fn parse(request: &str) -> Result<Self, Box<dyn Error>> {
+    pub(crate) fn parse(request: &str) -> Result<Self, &'static str> {
         // FIND_SUCCESSOR_OF_NODE text protocol parsing
+        if let Some(chord_request) = Self::parse_find_successor_of_node_request_protocol(request)? {
+            return Ok(chord_request);
+        }
+
+        // GET_SUCCESSOR_LIST text protocol parsing
+        if let Some(chord_request) = Self::parse_get_successor_list_request_protocol(request) {
+            return Ok(chord_request);
+        }
+
+        // GET_PREDECESSOR text protocol parsing
+        if let Some(chord_request) = Self::parse_get_predecessor_request_protocol(request) {
+            return Ok(chord_request);
+        }
+
+        // NOTIFICATION_BY text protocol parsing
+        if let Some(chord_request) = Self::parse_notification_by_request_protocol(request)? {
+            return Ok(chord_request);
+        }
+
+        // CHECK_NODE text protocol parsing
+        if let Some(chord_request) = Self::parse_check_node_request_protocol(request) {
+            return Ok(chord_request);
+        }
+
+        Err("invalid request (protocol error)")
+    }
+
+    fn parse_find_successor_of_node_request_protocol(
+        request: &str,
+    ) -> Result<Option<Self>, &'static str> {
         let find_successor_of_node_regex =
             Regex::new(r"^FIND_SUCCESSOR_OF_NODE=\[([0-9a-f]{32})\]\[([0-9a-f:.\[\]]+)\];$")
                 .unwrap();
@@ -418,24 +491,33 @@ impl ChordRequest {
             let node_id = request_datas[1].to_string();
             let node_public_addr = request_datas[2]
                 .parse::<SocketAddr>()
-                .map_err(|_| "invalid request (invalid socket address found)")?;
-            return Ok(ChordRequest::FindSuccessorOfNode(Node::create_from(
+                .map_err(|_| "invalid request (invalid socket address)")?;
+            return Ok(Some(ChordRequest::FindSuccessorOfNode(Node::create_from(
                 hex::decode(node_id).unwrap().try_into().unwrap(),
                 node_public_addr,
-            )));
+            ))));
         }
 
-        // GET_SUCCESSOR_LIST text protocol parsing
+        Ok(None)
+    }
+
+    fn parse_get_successor_list_request_protocol(request: &str) -> Option<Self> {
         if request == "GET_SUCCESSOR_LIST;" {
-            return Ok(Self::GetSuccessorList);
+            return Some(Self::GetSuccessorList);
         }
 
-        // GET_PREDECESSOR text protocol parsing
+        None
+    }
+
+    fn parse_get_predecessor_request_protocol(request: &str) -> Option<Self> {
         if request == "GET_PREDECESSOR;" {
-            return Ok(Self::GetPredecessor);
+            return Some(Self::GetPredecessor);
         }
 
-        // NOTIFICATION_BY text protocol parsing
+        None
+    }
+
+    fn parse_notification_by_request_protocol(request: &str) -> Result<Option<Self>, &'static str> {
         let notification_by_regex =
             Regex::new(r"^NOTIFICATION_BY=\[([0-9a-f]{32})\]\[([0-9a-f:.\[\]]+)\];$").unwrap();
 
@@ -444,20 +526,23 @@ impl ChordRequest {
             let node_id = request_datas[1].to_string();
             let node_public_addr = request_datas[2]
                 .parse::<SocketAddr>()
-                .map_err(|_| "invalid request (invalid socket address found)")?;
+                .map_err(|_| "invalid request (invalid socket address)")?;
 
-            return Ok(Self::NotificationBy(Node::create_from(
+            return Ok(Some(Self::NotificationBy(Node::create_from(
                 hex::decode(node_id).unwrap().try_into().unwrap(),
                 node_public_addr,
-            )));
+            ))));
         }
 
-        // CHECK_NODE text protocol parsing
+        Ok(None)
+    }
+
+    fn parse_check_node_request_protocol(request: &str) -> Option<Self> {
         if request == "CHECK_NODE;" {
-            return Ok(ChordRequest::CheckNode);
+            return Some(ChordRequest::CheckNode);
         }
 
-        Err(From::from("invalid request (protocol error)"))
+        None
     }
 
     /// Converts the current `ChordRequest` abstraction
