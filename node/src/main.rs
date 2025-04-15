@@ -70,14 +70,14 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         };
 
-        let request_handler = chord::request_handler::build_request_handler(
-            request_stream,
-            self_node.clone(),
-            Arc::clone(&self_node_successor_list),
-            Arc::clone(&self_node_predecessor),
-        );
+        // let request_handler = chord::request_handler::build_request_handler(
+        //     request_stream,
+        //     self_node.clone(),
+        //     Arc::clone(&self_node_successor_list),
+        //     Arc::clone(&self_node_predecessor),
+        // );
 
-        server_task_sender.send(Box::new(request_handler)).unwrap();
+        // server_task_sender.send(Box::new(request_handler)).unwrap();
     }
 
     Ok(())
