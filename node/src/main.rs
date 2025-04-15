@@ -1,5 +1,6 @@
 use chord::{protocol::ChordResponse, request_initiator, Node, SUCCESSOR_LIST_LENGTH};
 use cli::Args;
+use gossip::State;
 use std::{
     error::Error,
     net::TcpListener,
@@ -14,6 +15,7 @@ use std::{
 
 mod chord;
 mod cli;
+mod global_request_handler;
 mod gossip;
 
 const SERVER_THREAD_POOL_SIZE: u8 = 10;
@@ -34,6 +36,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             )
         },
     )?;
+
+    // Data to disseminate
+    let gossip_state: Arc<RwLock<Option<State>>> = Arc::new(RwLock::new(None));
 
     let self_node_successor_list = chord::initialize_self_node_successor_list(&self_node, &args)?;
 

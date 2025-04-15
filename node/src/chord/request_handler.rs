@@ -69,7 +69,7 @@ pub(crate) fn build_request_handler(
     }
 }
 
-fn find_successor_of_node_request_handler(
+pub(crate) fn find_successor_of_node_request_handler(
     self_node: Node,
     self_node_successor_list: [Node; SUCCESSOR_LIST_LENGTH],
     target_node: Node,
@@ -117,17 +117,19 @@ fn find_successor_of_node_request_handler(
     )
 }
 
-fn get_successor_list_request_handler(
+pub(crate) fn get_successor_list_request_handler(
     self_node_successor_list: [Node; SUCCESSOR_LIST_LENGTH],
 ) -> ChordResponse {
     ChordResponse::SuccessorList(self_node_successor_list)
 }
 
-fn get_predecessor_request_handler(self_node_predecessor: Option<Node>) -> ChordResponse {
+pub(crate) fn get_predecessor_request_handler(
+    self_node_predecessor: Option<Node>,
+) -> ChordResponse {
     ChordResponse::Predecessor(self_node_predecessor)
 }
 
-fn node_notification_request_handler(
+pub(crate) fn node_notification_request_handler(
     self_node: Node,
     self_node_predecessor: Arc<RwLock<Option<Node>>>,
     self_node_successor_list: [Node; SUCCESSOR_LIST_LENGTH],
@@ -155,7 +157,7 @@ fn node_notification_request_handler(
     ChordResponse::SuccessorList(self_node_successor_list)
 }
 
-fn check_node_request_handler() -> ChordResponse {
+pub(crate) fn check_node_request_handler() -> ChordResponse {
     ChordResponse::Active
 }
 
