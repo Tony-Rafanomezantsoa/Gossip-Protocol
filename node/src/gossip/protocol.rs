@@ -146,6 +146,15 @@ impl GossipResponse {
 
         None
     }
+
+    pub(crate) fn to_protocol_text(&self) -> String {
+        match *self {
+            Self::Ignore => "RESPONSE=IGNORE;".to_string(),
+            Self::ResponseWithData(ref state) => {
+                format!("RESPONSE=[{}][{}];", state.data, state.timestamp)
+            }
+        }
+    }
 }
 
 #[cfg(test)]

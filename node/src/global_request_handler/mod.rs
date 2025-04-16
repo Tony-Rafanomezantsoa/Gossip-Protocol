@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     chord::{self, protocol::ChordRequest, Node, SUCCESSOR_LIST_LENGTH},
-    gossip::protocol::GossipRequest,
+    gossip::{self, protocol::GossipRequest, State},
 };
 
 enum Request {
@@ -33,6 +33,7 @@ pub(crate) fn build_request_handler(
     self_node: Node,
     self_node_successor_list: Arc<RwLock<[Node; SUCCESSOR_LIST_LENGTH]>>,
     self_node_predecessor: Arc<RwLock<Option<Node>>>,
+    self_node_gossip_data: Arc<RwLock<Option<State>>>,
 ) -> impl FnOnce() + Send + 'static {
     move || {
         let mut request_msg = String::new();
@@ -83,7 +84,24 @@ pub(crate) fn build_request_handler(
 
                 let _ = stream.write(response.to_protocol_text().as_bytes());
             }
-            Request::GossipRequest(gossip_request) => {}
+            Request::GossipRequest(gossip_request) => {
+                let response = match gossip_request {
+                    GossipRequest::UpdateData(received_data) => {
+                        gossip::request_handler::update_data_request_handler(
+                            self_node_gossip_data,
+                            received_data,
+                        )
+                    }
+                    GossipRequest::ShareData(received_data) => {
+                        gossip::request_handler::share_data_request_handler(
+                            self_node_gossip_data,
+                            received_data,
+                        )
+                    }
+                };
+
+                let _ = stream.write(response.to_protocol_text().as_bytes());
+            }
         }
     }
 }
