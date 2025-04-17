@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     )?;
 
     // Data to disseminate
-    let gossip_state: Arc<RwLock<Option<State>>> = Arc::new(RwLock::new(None));
+    let self_node_gossip_data: Arc<RwLock<Option<State>>> = Arc::new(RwLock::new(None));
 
     let self_node_successor_list = chord::initialize_self_node_successor_list(&self_node, &args)?;
 
@@ -70,14 +70,15 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         };
 
-        // let request_handler = chord::request_handler::build_request_handler(
-        //     request_stream,
-        //     self_node.clone(),
-        //     Arc::clone(&self_node_successor_list),
-        //     Arc::clone(&self_node_predecessor),
-        // );
+        let request_handler = global_request_handler::build_request_handler(
+            request_stream,
+            self_node.clone(),
+            Arc::clone(&self_node_successor_list),
+            Arc::clone(&self_node_predecessor),
+            Arc::clone(&self_node_gossip_data),
+        );
 
-        // server_task_sender.send(Box::new(request_handler)).unwrap();
+        server_task_sender.send(Box::new(request_handler)).unwrap();
     }
 
     Ok(())
