@@ -3,6 +3,7 @@
 
 pub(crate) mod protocol;
 pub(crate) mod request_handler;
+pub(crate) mod request_initiator;
 
 /// Represents the data to disseminate
 /// using the Gossip protocol.
