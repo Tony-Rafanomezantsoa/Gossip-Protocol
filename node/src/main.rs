@@ -1,13 +1,13 @@
 use chord::{protocol::ChordResponse, request_initiator, Node, SUCCESSOR_LIST_LENGTH};
 use cli::Args;
-use gossip::State;
+use gossip::{protocol::GossipResponse, State};
 use std::{
     error::Error,
     net::TcpListener,
     process,
     sync::{
         mpsc::{self, Sender},
-        Arc, Mutex, RwLock,
+        Arc, Mutex, RwLock, RwLockReadGuard,
     },
     thread,
     time::Duration,
@@ -231,5 +231,60 @@ fn print_self_node_core_components(
         println!("#################################################");
 
         thread::sleep(Duration::from_secs(1));
+    });
+}
+
+/// Disseminate `self_node_gossip_data`
+/// periodically to a random node in a separate thread.
+fn disseminate_data_periodically(
+    self_node: Node,
+    self_node_gossip_data: Arc<RwLock<Option<State>>>,
+    self_node_successor_list: Arc<RwLock<[Node; SUCCESSOR_LIST_LENGTH]>>,
+) {
+    thread::spawn(move || loop {
+        let random_remote_node = {
+            let node_collection = self_node_successor_list
+                .read()
+                .unwrap()
+                .clone()
+                .into_iter()
+                .filter(|n| *n != self_node)
+                .collect::<Vec<_>>();
+
+            if node_collection.len() == 0 {
+                thread::sleep(Duration::from_secs(2));
+                continue;
+            }
+
+            let random_index = rand::random_range(0..node_collection.len());
+            node_collection[random_index].clone()
+        };
+
+        let gossip_response = gossip::request_initiator::share_data(
+            self_node_gossip_data.read().unwrap().clone(),
+            random_remote_node.get_public_addr(),
+        );
+
+        if let GossipResponse::ResponseWithData(response_data) = gossip_response {
+            let self_node_gossip_data_content = self_node_gossip_data.read().unwrap().clone();
+
+            if self_node_gossip_data_content.is_none() {
+                let mut self_node_gossip_data_lock = self_node_gossip_data.write().unwrap();
+                *self_node_gossip_data_lock = Some(response_data);
+                thread::sleep(Duration::from_secs(2));
+                continue;
+            }
+
+            if let Some(self_node_gossip_data_content) = self_node_gossip_data_content {
+                if response_data.timestamp > self_node_gossip_data_content.timestamp {
+                    let mut self_node_gossip_data_lock = self_node_gossip_data.write().unwrap();
+                    *self_node_gossip_data_lock = Some(response_data);
+                    thread::sleep(Duration::from_secs(2));
+                    continue;
+                }
+            }
+        }
+
+        thread::sleep(Duration::from_secs(2));
     });
 }

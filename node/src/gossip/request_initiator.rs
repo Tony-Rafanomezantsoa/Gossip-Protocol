@@ -1,4 +1,8 @@
-use std::{io::{Write, Read}, net::{Shutdown, SocketAddr, TcpStream}, time::Duration};
+use std::{
+    io::{Read, Write},
+    net::{Shutdown, SocketAddr, TcpStream},
+    time::Duration,
+};
 
 use super::{protocol::GossipResponse, State};
 
