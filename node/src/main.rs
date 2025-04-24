@@ -51,6 +51,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         self_node.clone(),
         Arc::clone(&self_node_predecessor),
         Arc::clone(&self_node_successor_list),
+        Arc::clone(&self_node_gossip_data)
     );
 
     run_network_stabilization(
@@ -206,6 +207,7 @@ fn print_self_node_core_components(
     self_node: Node,
     self_node_predecessor: Arc<RwLock<Option<Node>>>,
     self_node_successor_list: Arc<RwLock<[Node; SUCCESSOR_LIST_LENGTH]>>,
+    self_node_gossip_data: Arc<RwLock<Option<State>>>,
 ) {
     thread::spawn(move || loop {
         println!("SELF-NODE: [{:?}]", self_node.get_public_addr());
@@ -219,6 +221,18 @@ fn print_self_node_core_components(
                 None => String::from("NONE"),
             }
         );
+
+        println!("-------------------------------------------------");
+
+        let gossip_data = {
+            let gossip_data = self_node_gossip_data.read().unwrap().clone();
+            match gossip_data {
+                Some(state) => state.data,
+                None => "NONE".to_string(),
+            }
+        };
+        
+        println!("DATA: [{}]", gossip_data);
 
         println!("-------------------------------------------------");
 
