@@ -51,7 +51,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         self_node.clone(),
         Arc::clone(&self_node_predecessor),
         Arc::clone(&self_node_successor_list),
-        Arc::clone(&self_node_gossip_data)
+        Arc::clone(&self_node_gossip_data),
+    );
+
+    disseminate_data_periodically(
+        self_node.clone(),
+        Arc::clone(&self_node_gossip_data),
+        Arc::clone(&self_node_successor_list),
     );
 
     run_network_stabilization(
@@ -231,7 +237,7 @@ fn print_self_node_core_components(
                 None => "NONE".to_string(),
             }
         };
-        
+
         println!("DATA: [{}]", gossip_data);
 
         println!("-------------------------------------------------");
@@ -285,6 +291,7 @@ fn disseminate_data_periodically(
             if self_node_gossip_data_content.is_none() {
                 let mut self_node_gossip_data_lock = self_node_gossip_data.write().unwrap();
                 *self_node_gossip_data_lock = Some(response_data);
+                drop(self_node_gossip_data_lock);
                 thread::sleep(Duration::from_secs(2));
                 continue;
             }
@@ -293,6 +300,7 @@ fn disseminate_data_periodically(
                 if response_data.timestamp > self_node_gossip_data_content.timestamp {
                     let mut self_node_gossip_data_lock = self_node_gossip_data.write().unwrap();
                     *self_node_gossip_data_lock = Some(response_data);
+                    drop(self_node_gossip_data_lock);
                     thread::sleep(Duration::from_secs(2));
                     continue;
                 }
